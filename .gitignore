@@ -1,0 +1,3 @@
+php-fpm/tmp/
+!php-fpm/tmp/.gitkeep
+.idea

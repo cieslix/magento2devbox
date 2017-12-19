@@ -1,0 +1,65 @@
+version: '2'
+
+services:
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+     - "7081:8025"
+
+  redis:
+    image: redis
+
+  mysql:
+    image: percona:5.7
+    environment:
+     - MYSQL_ROOT_PASSWORD=!Password123
+     - MYSQL_DATABASE=magento
+     - MYSQL_USER=magento
+     - MYSQL_PASSWORD=Password123
+    volumes:
+     - mysqldata:/var/lib/mysql
+     - ./mysql/conf.d/mysqld.cnf:/etc/mysql/percona-server.conf.d/mysqld.cnf
+    ports:
+     - "33306:3306"
+
+  php-fpm:
+    build: php-fpm
+    volumes:
+     - ~/.composer:/var/www/.composer
+     - phpdata:/tmp
+     - ./php-fpm/php-ini-overrides.ini:/usr/local/etc/php/conf.d/99-overrides.ini
+     - ..:/var/www/magento2
+    depends_on:
+     - redis
+     - mysql
+
+  php-cron:
+    build: php-fpm
+    depends_on:
+     - redis
+     - mysql
+     - php-fpm
+    volumes_from:
+      - php-fpm
+    entrypoint:
+      - cron
+      - -f
+
+  nginx:
+    image: nginx
+    volumes:
+     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    volumes_from:
+     - php-fpm
+    ports:
+     - "7080:80"
+    depends_on:
+     - php-fpm
+
+networks:
+  default:
+
+volumes:
+  mysqldata: ~
+  phpdata: ~
